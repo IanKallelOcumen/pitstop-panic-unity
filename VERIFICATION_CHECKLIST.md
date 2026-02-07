@@ -1,5 +1,9 @@
 # Triple-check verification
 
+**Last full check:** Project verified; new Git repo created with name **pitstop-panic-unity** (placeholder—rename on GitHub/GitLab as you like).
+
+---
+
 ## ✅ What was verified
 
 ### 1. Menu assets from Bayanihan (all present)
@@ -38,3 +42,11 @@
 5. **Run:** Open Main_Menu, press Play. Play → LevelSelect (or Garage); Back from LevelSelect/Victory → Main_Menu.
 
 If any asset shows as *Missing* in the Main_Menu scene, re-copy the corresponding file and `.meta` from Bayanihan so the GUID stays the same.
+
+---
+
+## ✅ Repo and structure
+
+- **Git:** Repo initialized; `.gitignore` (Unity + Python) added; initial commit created.
+- **Repo name:** `pitstop-panic-unity` (see README); change when you create the remote.
+- **Tracked:** All Assets (Art, Font, Scenes, Scripts, Editor), Tools, and docs (README, UNITY_SETUP, GEMINI_PROMPTS, VERIFICATION_CHECKLIST).
