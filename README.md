@@ -1,6 +1,6 @@
 # Pitstop Panic – Car Repair Game (Unity)
 
-**Repository:** `pitstop-panic-unity` (placeholder; rename as you like on GitHub/GitLab.)
+**Repository:** [pitstop-panic-unity](https://github.com/IanKallelOcumen/pitstop-panic-unity) — push with `git push -u origin master` (create the repo on GitHub first if needed).
 
 A 2D car repair / automotive maintenance game for Unity, inspired by drag-and-drop “fix the car” games. Drag the correct tool to the right part of the car (tire, engine, etc.) to repair it.
 
