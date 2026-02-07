@@ -34,7 +34,7 @@ public class RepairGameManager : MonoBehaviour
     void Start()
     {
         if (repairTargets == null || repairTargets.Length == 0)
-            repairTargets = FindObjectsByType<RepairTarget>(FindObjectsSortMode.None);
+            repairTargets = FindObjectsOfType<RepairTarget>();
 
         timeLeft = levelTimeSeconds;
         score = 0;

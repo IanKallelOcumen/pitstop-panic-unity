@@ -45,7 +45,7 @@ public class MenuManager : MonoBehaviour
         StartCoroutine(Transition(mainMenuPanel, settingsPanel, -1)); 
     }
 
-    public void OnBackPresssed()
+    public void OnBackPressed()
     {
         if (mainMenuPanel == null) return;
         StartCoroutine(Transition(settingsPanel, mainMenuPanel, 1));

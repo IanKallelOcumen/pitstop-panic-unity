@@ -24,7 +24,7 @@ public class RepairTarget : MonoBehaviour
 
     void Start()
     {
-        gameManager = FindFirstObjectByType<RepairGameManager>();
+        gameManager = FindObjectOfType<RepairGameManager>();
     }
 
     public void TryRepairWith(DraggableTool tool)

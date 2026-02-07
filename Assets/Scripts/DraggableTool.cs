@@ -28,7 +28,7 @@ public class DraggableTool : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
     {
         rectTransform = GetComponent<RectTransform>();
         canvas = GetComponentInParent<Canvas>();
-        if (canvas == null) canvas = FindFirstObjectByType<Canvas>();
+        if (canvas == null) canvas = FindObjectOfType<Canvas>();
         if (!TryGetComponent(out canvasGroup))
             canvasGroup = gameObject.AddComponent<CanvasGroup>();
     }
