@@ -1,28 +1,32 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
+using TMPro;
 
-/// <summary>
-/// Victory screen: "Car Repaired! Test drive successful." - Next Level and Back To Menu.
-/// </summary>
 public class VictoryController : MonoBehaviour
 {
-    public Text scoreText;
+    [SerializeField] private string garageSceneName = "Garage";
+    [SerializeField] private string mainMenuSceneName = "Main_Menu";
+    
+    // Exposed for PitstopSetup.cs (even if used only for display)
+    [SerializeField] private TMP_Text scoreText;
 
-    void Start()
+    private void Start()
     {
-        int lastScore = PlayerPrefs.GetInt("LastScore", 0);
         if (scoreText != null)
-            scoreText.text = "Score: " + lastScore;
+        {
+            int lastScore = PlayerPrefs.GetInt("LastScore", 0);
+            scoreText.text = $"Final Score: {lastScore}";
+        }
     }
 
     public void OnNextLevel()
     {
-        SceneManager.LoadScene(SceneNames.Garage);
+        // For now, just reload the garage (or load next level logic)
+        SceneManager.LoadScene(garageSceneName);
     }
 
     public void OnBackToMenu()
     {
-        SceneManager.LoadScene(SceneNames.MainMenu);
+        SceneManager.LoadScene(mainMenuSceneName);
     }
 }

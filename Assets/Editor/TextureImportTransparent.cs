@@ -19,7 +19,7 @@ public class TextureImportTransparent : AssetPostprocessor
         var importer = (TextureImporter)assetImporter;
         importer.alphaIsTransparency = true;
         importer.textureType = TextureImporterType.Sprite;
-        importer.spritePixelsToUnits = 100;
+        importer.spritePixelsPerUnit = 100;
         importer.filterMode = FilterMode.Bilinear;
         importer.textureCompression = TextureImporterCompression.Compressed;
     }

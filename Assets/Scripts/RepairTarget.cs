@@ -1,41 +1,82 @@
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.EventSystems;
-using UnityEngine.Events;
+using System.Collections;
 
-/// <summary>
-/// Attach to a UI Image or empty GameObject over the car (e.g. tire, engine zone).
-/// When the correct DraggableTool is dropped here, OnRepaired fires and you can swap to "fixed" car sprite.
-/// </summary>
-[RequireComponent(typeof(RectTransform))]
 public class RepairTarget : MonoBehaviour
 {
-    [Header("Which tool fixes this part (must match DraggableTool.toolType)")]
-    public string requiredToolType = "Wrench";
+    [Header("Repair Configuration")]
+    [SerializeField] public ToolType requiredTool; 
 
-    [Header("State")]
-    public bool isRepaired = false;
-    [Tooltip("Optional: sprite to show when repaired (e.g. tire icon -> checkmark).")]
-    public UnityEngine.UI.Image optionalRepairedImage;
+    [Header("Visual Feedback")]
+    [SerializeField] private GameObject brokenVisual; 
+    [SerializeField] private GameObject fixedVisual;  
+    [SerializeField] private ParticleSystem repairParticles;
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip repairSound;
 
-    [Header("Events")]
-    public UnityEvent OnRepaired = new UnityEvent();
+    private bool isFixed = false;
 
-    RepairGameManager gameManager;
+    public bool IsFixed => isFixed;
 
-    void Start()
+    private void Start()
     {
-        gameManager = FindObjectOfType<RepairGameManager>();
+        if (brokenVisual != null) brokenVisual.SetActive(true);
+        if (fixedVisual != null) fixedVisual.SetActive(false);
     }
 
-    public void TryRepairWith(DraggableTool tool)
+    public void Fix()
     {
-        if (isRepaired) return;
-        if (tool.toolType != requiredToolType) return;
+        if (isFixed) return;
 
-        isRepaired = true;
-        if (optionalRepairedImage != null)
-            optionalRepairedImage.enabled = true;
-        OnRepaired?.Invoke();
-        gameManager?.OnPartRepaired(this);
+        isFixed = true;
+
+        if (brokenVisual != null) brokenVisual.SetActive(false);
+        if (fixedVisual != null) fixedVisual.SetActive(true);
+
+        if (repairParticles != null)
+        {
+            repairParticles.Play();
+        }
+
+        if (audioSource != null && repairSound != null)
+        {
+            audioSource.PlayOneShot(repairSound);
+        }
+
+        // Add shake/punch effect
+        StartCoroutine(PunchScale());
+
+        if (RepairGameManager.Instance != null)
+        {
+            RepairGameManager.Instance.OnPartFixed();
+        }
+    }
+
+    private IEnumerator PunchScale()
+    {
+        Vector3 originalScale = transform.localScale;
+        Vector3 punchScale = originalScale * 1.3f;
+        float duration = 0.15f;
+        float t = 0;
+
+        // Scale Up
+        while (t < duration)
+        {
+            t += Time.deltaTime;
+            transform.localScale = Vector3.Lerp(originalScale, punchScale, t / duration);
+            yield return null;
+        }
+
+        t = 0;
+        // Scale Down
+        while (t < duration)
+        {
+            t += Time.deltaTime;
+            transform.localScale = Vector3.Lerp(punchScale, originalScale, t / duration);
+            yield return null;
+        }
+
+        transform.localScale = originalScale;
     }
 }

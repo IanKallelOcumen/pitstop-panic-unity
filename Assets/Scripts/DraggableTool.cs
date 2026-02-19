@@ -1,89 +1,122 @@
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using System.Collections;
+using System.Collections.Generic;
 
-/// <summary>
-/// Attach to a UI Image (tool icon). Lets the player drag it; use with RepairTarget for drop zones.
-/// Assign toolType to match RepairTarget's requiredToolType (e.g. "Tire" -> Jack/Wrench).
-/// </summary>
+[RequireComponent(typeof(CanvasGroup))]
 [RequireComponent(typeof(RectTransform))]
-[RequireComponent(typeof(Image))]
 public class DraggableTool : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
-    [Header("Tool identity - must match RepairTarget.requiredToolType")]
-    public string toolType = "Wrench";
+    [SerializeField] public ToolType toolType; 
 
-    [Header("Optional")]
-    [Tooltip("If set, this tool is hidden when not the current objective (e.g. only show correct tools per level).")]
-    public bool hideWhenNotRequired = false;
+    private RectTransform rectTransform;
+    private CanvasGroup canvasGroup;
+    private Canvas canvas;
+    private Vector2 originalPosition;
+    private Transform originalParent;
+    private Vector3 originalScale;
 
-    RectTransform rectTransform;
-    Canvas canvas;
-    CanvasGroup canvasGroup;
-    Vector2 startAnchoredPos;
-    Transform startParent;
-    int startSiblingIndex;
-
-    void Awake()
+    private void Awake()
     {
         rectTransform = GetComponent<RectTransform>();
+        canvasGroup = GetComponent<CanvasGroup>();
+        originalScale = transform.localScale;
+        
         canvas = GetComponentInParent<Canvas>();
-        if (canvas == null) canvas = FindObjectOfType<Canvas>();
-        if (!TryGetComponent(out canvasGroup))
-            canvasGroup = gameObject.AddComponent<CanvasGroup>();
+        if (canvas != null && canvas.rootCanvas != null)
+        {
+            canvas = canvas.rootCanvas;
+        }
     }
 
     public void OnBeginDrag(PointerEventData eventData)
     {
-        startParent = transform.parent;
-        startSiblingIndex = transform.GetSiblingIndex();
-        startAnchoredPos = rectTransform.anchoredPosition;
-        canvasGroup.alpha = 0.8f;
+        originalPosition = rectTransform.anchoredPosition;
+        originalParent = transform.parent;
+
         canvasGroup.blocksRaycasts = false;
-        transform.SetParent(canvas.transform, true);
+        canvasGroup.alpha = 0.6f;
+
+        // Scale up effect
+        StartCoroutine(AnimateScale(originalScale * 1.2f));
+
+        if (canvas != null)
+        {
+            transform.SetParent(canvas.transform, true);
+        }
     }
 
     public void OnDrag(PointerEventData eventData)
     {
-        if (canvas != null && canvas.renderMode == RenderMode.ScreenSpaceCamera)
-            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvas.transform as RectTransform, eventData.position, eventData.pressEventCamera, out Vector2 local);
-        else
-            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvas.transform as RectTransform, eventData.position, null, out Vector2 local);
-        rectTransform.localPosition = new Vector3(local.x, local.y, rectTransform.localPosition.z);
+        if (canvas != null)
+            rectTransform.anchoredPosition += eventData.delta / canvas.scaleFactor;
     }
 
     public void OnEndDrag(PointerEventData eventData)
     {
-        canvasGroup.alpha = 1f;
         canvasGroup.blocksRaycasts = true;
+        canvasGroup.alpha = 1.0f;
 
-        // Check if dropped on a RepairTarget
-        if (eventData.pointerCurrentRaycast.gameObject != null)
+        // Scale back down
+        StartCoroutine(AnimateScale(originalScale));
+
+        if (CheckForRepairTarget(eventData))
         {
-            var target = eventData.pointerCurrentRaycast.gameObject.GetComponent<RepairTarget>();
+            ReturnToOriginalPosition();
+        }
+        else
+        {
+            ReturnToOriginalPosition();
+        }
+    }
+
+    private bool CheckForRepairTarget(PointerEventData eventData)
+    {
+        List<RaycastResult> results = new List<RaycastResult>();
+        EventSystem.current.RaycastAll(eventData, results);
+
+        foreach (RaycastResult result in results)
+        {
+            if (result.gameObject == gameObject) continue;
+
+            RepairTarget target = result.gameObject.GetComponent<RepairTarget>();
+            
+            if (target == null)
+            {
+                target = result.gameObject.GetComponentInParent<RepairTarget>();
+            }
+
             if (target != null)
             {
-                target.TryRepairWith(this);
-                ReturnToStart();
-                return;
+                if (!target.IsFixed && target.requiredTool == this.toolType)
+                {
+                    target.Fix();
+                    return true;
+                }
             }
         }
 
-        ReturnToStart();
+        return false;
     }
 
-    void ReturnToStart()
+    private void ReturnToOriginalPosition()
     {
-        transform.SetParent(startParent, false);
-        transform.SetSiblingIndex(startSiblingIndex);
-        rectTransform.anchoredPosition = startAnchoredPos;
+        transform.SetParent(originalParent, true);
+        rectTransform.anchoredPosition = originalPosition;
     }
 
-    public void SetVisible(bool visible)
+    private IEnumerator AnimateScale(Vector3 target)
     {
-        if (TryGetComponent<Image>(out var img))
-            img.enabled = visible;
-        if (TryGetComponent<CanvasGroup>(out var cg))
-            cg.blocksRaycasts = visible;
+        float t = 0;
+        float duration = 0.1f;
+        Vector3 start = transform.localScale;
+        while (t < duration)
+        {
+            t += Time.deltaTime;
+            transform.localScale = Vector3.Lerp(start, target, t / duration);
+            yield return null;
+        }
+        transform.localScale = target;
     }
 }

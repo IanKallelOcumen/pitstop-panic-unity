@@ -57,3 +57,6 @@ Tools/__pycache__/
 .Python
 venv/
 .venv/
+
+# Unity Package Manager
+Packages/packages-lock.json

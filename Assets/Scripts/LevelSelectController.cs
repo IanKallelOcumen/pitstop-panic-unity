@@ -1,23 +1,19 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-/// <summary>
-/// Level select: Back to menu, or load level by index/name.
-/// </summary>
 public class LevelSelectController : MonoBehaviour
 {
-    public void OnBack()
+    [SerializeField] private string garageSceneName = "Garage";
+    [SerializeField] private string mainMenuSceneName = "Main_Menu";
+
+    public void LoadGarageLevel(int level)
     {
-        SceneManager.LoadScene(SceneNames.MainMenu);
+        GameSession.SelectedLevel = level;
+        SceneManager.LoadScene(garageSceneName);
     }
 
-    public void OnLevel(int levelIndex)
+    public void LoadMainMenu()
     {
-        // Level 1 = build index 2 if 0=MainMenu, 1=LevelSelect
-        SceneManager.LoadScene(SceneNames.Garage);
+        SceneManager.LoadScene(mainMenuSceneName);
     }
-
-    public void OnLevel1() => OnLevel(1);
-    public void OnLevel2() => OnLevel(2);
-    public void OnLevel3() => OnLevel(3);
 }

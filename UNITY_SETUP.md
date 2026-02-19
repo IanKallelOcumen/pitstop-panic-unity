@@ -1,5 +1,25 @@
 # Unity Setup – Step by Step
 
+## 0. Automatic setup (recommended)
+
+After copying Assets into your Unity project (step 1 below), use the **one-click setup** instead of doing steps 2–6 manually:
+
+1. In Unity: **Pitstop Panic → Setup All Scenes** (top menu bar).
+2. This automatically:
+   - Creates **LevelSelect**, **Garage**, **Victory** scenes with full UI, scripts, and button events already wired.
+   - Configures **Build Settings** (Main_Menu 0 → LevelSelect 1 → Garage 2 → Victory 3).
+   - Sets up the **Garage** with 4 repair zones (TireFront, TireRear, Engine, Oil), 6 draggable tools (Wrench, Jack, OilCan, Screwdriver, Funnel, Multimeter), HUD (score + timer), and a GameManager with everything pre-assigned.
+   - Sets up **Victory** with score display, Next Level, and Back To Menu buttons.
+   - Sets up **LevelSelect** with 3 level buttons and a Back button.
+3. Open **Main_Menu**, press **Play** — the full game flow works out of the box.
+4. Replace the placeholder colors with your actual sprites (car, tools) in the **Garage** scene whenever you have them.
+
+> If you only need to fix Build Settings without recreating scenes, use **Pitstop Panic → Setup Build Settings Only**.
+
+---
+
+## Manual setup (steps 1–6 below)
+
 ## 1. Create project and copy files
 
 1. Open Unity Hub → Create new project → **2D (Core)** or **2D (URP)**.
