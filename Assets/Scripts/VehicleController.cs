@@ -35,9 +35,9 @@ public class VehicleController : MonoBehaviour
             fixedVisualObj.SetActive(false);
         }
 
-        // Randomize Problems (3-10 range as requested)
+        // Randomize Problems (allow 0 to start fixed if desired)
         int countToEnable = Random.Range(minParts, maxParts + 1);
-        countToEnable = Mathf.Clamp(countToEnable, 1, allPossibleTargets.Count);
+        countToEnable = Mathf.Clamp(countToEnable, 0, allPossibleTargets.Count);
         
         // Shuffle
         for (int i = 0; i < allPossibleTargets.Count; i++)
@@ -59,6 +59,13 @@ public class VehicleController : MonoBehaviour
             {
                 allPossibleTargets[i].gameObject.SetActive(false);
             }
+        }
+
+        // If nothing is broken, show fixed visual immediately
+        if (countToEnable == 0)
+        {
+            if (fixedVisualObj != null) fixedVisualObj.SetActive(true);
+            if (visualImage != null) visualImage.gameObject.SetActive(false);
         }
     }
 

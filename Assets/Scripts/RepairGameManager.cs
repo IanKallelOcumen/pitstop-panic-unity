@@ -25,6 +25,7 @@ public class RepairGameManager : MonoBehaviour
     [SerializeField] private GameObject carPrefab; // Used if we spawn
     [SerializeField] private GameObject scooterPrefab; // Used if we spawn
     [SerializeField] private Transform spawnPoint; // Where to put the vehicle
+    [SerializeField] private bool startFixedFirst = true; // Start with no broken parts on first vehicle
 
     [Header("Debug Info")]
     [SerializeField] private int brokenPartsCount;
@@ -98,13 +99,20 @@ public class RepairGameManager : MonoBehaviour
             currentVehicle = obj.GetComponent<VehicleController>();
         }
 
-        // 3. Initialize Vehicle (Randomize Problems 3-10)
+        // 3. Initialize Vehicle (Randomize Problems 3-10, or 0 if starting fixed first)
         if (currentVehicle != null)
         {
             StartCoroutine(currentVehicle.DriveIn());
             
-            // Randomize active parts count: 3 to 10
-            currentVehicle.Initialize(3, 10);
+            // Randomize active parts count
+            int minParts = 3;
+            int maxParts = 10;
+            if (startFixedFirst && vehiclesFixed == 0)
+            {
+                minParts = 0;
+                maxParts = 0;
+            }
+            currentVehicle.Initialize(minParts, maxParts);
             
             // 4. Update References
             repairTargets = currentVehicle.GetComponentsInChildren<RepairTarget>(true);
@@ -116,6 +124,12 @@ public class RepairGameManager : MonoBehaviour
                 if (t.gameObject.activeSelf) activeTargets.Add(t);
             }
             brokenPartsCount = activeTargets.Count;
+
+            // If starting fixed, auto-progress to next vehicle
+            if (brokenPartsCount == 0)
+            {
+                StartCoroutine(WinGameSequence());
+            }
         }
         else
         {

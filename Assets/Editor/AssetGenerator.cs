@@ -1,10 +1,13 @@
 using UnityEngine;
 using UnityEditor;
 using System.IO;
+using System.Linq;
 
 public class AssetGenerator : EditorWindow
 {
     const string ArtPath = "Assets/Art";
+    const string ModelsPath = "Assets/Models";
+    const string DownloadsPath = "d:\\downloads";
 
     [MenuItem("Pitstop Panic/Regenerate Placeholders")]
     public static void GenerateAll()
@@ -35,6 +38,137 @@ public class AssetGenerator : EditorWindow
 
         AssetDatabase.Refresh();
         Debug.Log("Placeholder Assets Generated in Assets/Art!");
+    }
+
+    [MenuItem("Pitstop Panic/Import Models from Downloads")]
+    public static void ImportModelsFromDownloads()
+    {
+        if (!Directory.Exists(ModelsPath)) Directory.CreateDirectory(ModelsPath);
+        if (!Directory.Exists(DownloadsPath))
+        {
+            Debug.LogWarning("Downloads folder not found: " + DownloadsPath);
+            return;
+        }
+
+        string[] exts = new[] { ".glb", ".fbx", ".obj" };
+        var files = Directory.EnumerateFiles(DownloadsPath, "*.*", SearchOption.AllDirectories)
+            .Where(f => exts.Contains(Path.GetExtension(f).ToLower()))
+            .ToList();
+
+        int copied = 0;
+        foreach (var f in files)
+        {
+            string dest = Path.Combine(ModelsPath, Path.GetFileName(f));
+            try
+            {
+                File.Copy(f, dest, true);
+                copied++;
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning("Copy failed: " + f + " -> " + dest + " :: " + e.Message);
+            }
+        }
+
+        AssetDatabase.Refresh();
+        Debug.Log($"Imported {copied} model files into {ModelsPath}");
+    }
+
+    [MenuItem("Pitstop Panic/Bake 3D Models to Sprites")]
+    public static void BakeModelsToSprites()
+    {
+        if (!Directory.Exists(ArtPath)) Directory.CreateDirectory(ArtPath);
+        if (!Directory.Exists(ModelsPath))
+        {
+            Debug.LogWarning("Models folder not found: " + ModelsPath + ". Import models first.");
+            return;
+        }
+
+        var modelPaths = Directory.EnumerateFiles(ModelsPath, "*.*", SearchOption.TopDirectoryOnly)
+            .Where(p => p.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase)
+                     || p.EndsWith(".glb", System.StringComparison.OrdinalIgnoreCase)
+                     || p.EndsWith(".obj", System.StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (modelPaths.Count == 0)
+        {
+            Debug.LogWarning("No models found to bake in " + ModelsPath);
+            return;
+        }
+
+        // Setup temporary camera
+        var camGO = new GameObject("BakeCamera");
+        var cam = camGO.AddComponent<Camera>();
+        cam.orthographic = true;
+        cam.clearFlags = CameraClearFlags.SolidColor;
+        cam.backgroundColor = new Color(0, 0, 0, 0);
+        cam.cullingMask = ~0;
+
+        int baked = 0;
+        foreach (var path in modelPaths)
+        {
+            var obj = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (obj == null)
+            {
+                Debug.LogWarning("Could not load model (requires importer for GLB): " + path);
+                continue;
+            }
+
+            GameObject inst = PrefabUtility.InstantiatePrefab(obj) as GameObject;
+            if (inst == null) continue;
+
+            // Frame model
+            Bounds bounds = CalculateBounds(inst);
+            cam.transform.position = bounds.center + new Vector3(0, 0, -10);
+            cam.transform.rotation = Quaternion.identity;
+
+            // Decide output name and size
+            string outName;
+            int w, h;
+            DecideOutput(Path.GetFileName(path), out outName, out w, out h);
+            if (string.IsNullOrEmpty(outName))
+            {
+                Object.DestroyImmediate(inst);
+                continue;
+            }
+
+            float aspect = (float)w / h;
+            float sizeByHeight = bounds.extents.y * 1.2f;
+            float sizeByWidth = (bounds.extents.x * 1.2f) / aspect;
+            cam.orthographicSize = Mathf.Max(0.01f, Mathf.Max(sizeByHeight, sizeByWidth));
+
+            RenderTexture rt = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32);
+            rt.antiAliasing = 4;
+            cam.targetTexture = rt;
+            cam.Render();
+
+            Texture2D tex = new Texture2D(w, h, TextureFormat.ARGB32, false);
+            RenderTexture.active = rt;
+            tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+            tex.Apply();
+            RenderTexture.active = null;
+            cam.targetTexture = null;
+            rt.Release();
+
+            var bytes = tex.EncodeToPNG();
+            var outPath = Path.Combine(ArtPath, outName);
+            File.WriteAllBytes(outPath, bytes);
+            AssetDatabase.ImportAsset(outPath);
+            var importer = AssetImporter.GetAtPath(outPath) as TextureImporter;
+            if (importer != null)
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                importer.alphaIsTransparency = true;
+                importer.SaveAndReimport();
+            }
+
+            baked++;
+            Object.DestroyImmediate(inst);
+        }
+
+        Object.DestroyImmediate(camGO);
+        AssetDatabase.Refresh();
+        Debug.Log($"Baked {baked} sprites into {ArtPath}");
     }
 
     static void CreateTexture(string name, int width, int height, Color color)
@@ -68,5 +202,51 @@ public class AssetGenerator : EditorWindow
             importer.textureType = TextureImporterType.Sprite;
             importer.SaveAndReimport();
         }
+    }
+
+    static Bounds CalculateBounds(GameObject go)
+    {
+        var renderers = go.GetComponentsInChildren<Renderer>();
+        if (renderers.Length == 0) return new Bounds(go.transform.position, Vector3.one);
+        Bounds b = renderers[0].bounds;
+        for (int i = 1; i < renderers.Length; i++)
+            b.Encapsulate(renderers[i].bounds);
+        return b;
+    }
+
+    static void DecideOutput(string fileName, out string outName, out int w, out int h)
+    {
+        string name = fileName.ToLowerInvariant();
+        outName = null; w = 256; h = 256;
+
+        // Vehicles
+        if (name.Contains("car"))
+        {
+            w = 512; h = 256;
+            if (name.Contains("fixed")) outName = "CarFixed.png";
+            else if (name.Contains("broken")) outName = "CarBroken.png";
+            else outName = "CarFixed.png";
+            return;
+        }
+        if (name.Contains("scooter"))
+        {
+            w = 256; h = 256;
+            if (name.Contains("fixed")) outName = "ScooterFixed.png";
+            else if (name.Contains("broken")) outName = "ScooterBroken.png";
+            else outName = "ScooterFixed.png";
+            return;
+        }
+
+        // Tools
+        w = 128; h = 128;
+        if (name.Contains("wrench")) { outName = "Tool_Wrench.png"; return; }
+        if (name.Contains("screwdriver")) { outName = "Tool_Screwdriver.png"; return; }
+        if (name.Contains("jack")) { outName = "Tool_Jack.png"; return; }
+        if (name.Contains("oilcan") || name.Contains("oil_can") || name.Contains("oil")) { outName = "Tool_OilCan.png"; return; }
+        if (name.Contains("funnel")) { outName = "Tool_Funnel.png"; return; }
+        if (name.Contains("multimeter") || name.Contains("multi") || name.Contains("meter")) { outName = "Tool_Multimeter.png"; return; }
+
+        // Parts
+        if (name.Contains("wheel")) { outName = "Wheel.png"; return; }
     }
 }
